@@ -33,6 +33,7 @@ userRouter.post(
 
 userRouter.post("/logout", verifyUserMiddleware, async (req, res) => {
   res.clearCookie(ACCESS_TOKEN_COOKIE_KEY, COOKIE_CONFIG);
+  res.redirect("/");
   res.send(STATUS_CODES.OK);
 });
 
