@@ -1,3 +1,6 @@
+import { RESPONSE_ERROR_CODES } from "#constants/errorCodes.js";
+import { STATUS_CODES } from "#constants/statusCodes.js";
+import { generateErrorResponse } from "#utils/generateResponse.js";
 import { Request, Response, NextFunction } from "express";
 import { AnyZodObject } from "zod";
 import { ZodError } from "zod";
@@ -19,14 +22,24 @@ const validateDataSchemaMiddleware =
           return `${fieldPath}: ${err.message}`;
         });
 
-        res.status(400).json({
-          error: formattedErrors[0],
+        console.error("ERROR", formattedErrors);
+
+        const { status, payload } = generateErrorResponse({
+          status: STATUS_CODES.BAD_REQUEST,
+          error: RESPONSE_ERROR_CODES.REQUEST_VALIDATION_FAILED,
         });
+
+        res.status(status).json(payload);
         return;
       }
 
+      console.error("ERROR", error);
       // Catch-all for other unknown errors
-      res.status(500).json({ error: "Internal server error" });
+      const { status, payload } = generateErrorResponse({
+        status: STATUS_CODES.SERVER_ERROR,
+        error: RESPONSE_ERROR_CODES.SOMETHING_WENT_WRONG_SERVER_ERROR,
+      });
+      res.status(status).json(payload);
       return;
     }
   };
