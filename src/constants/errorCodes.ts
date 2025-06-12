@@ -13,4 +13,8 @@ export const RESPONSE_ERROR_CODES: Record<string, ErrorData> = {
     errorCode: 3,
     errorMessage: "User does not exist",
   },
+  UNAUTHORIZED: {
+    errorCode: 4,
+    errorMessage: "Unauthorized",
+  },
 } as const;

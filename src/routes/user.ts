@@ -1,7 +1,13 @@
+import {
+  ACCESS_TOKEN_COOKIE_KEY,
+  COOKIE_CONFIG,
+} from "#constants/cookieConfig.js";
+import { STATUS_CODES } from "#constants/statusCodes.js";
 import { loginUser } from "#controllers/users/index.js";
 import { LoginUserRequestPayload } from "#controllers/users/types.js";
 import { userLoginRequestPayload } from "#controllers/users/validators.js";
 import validateDataSchemaMiddleware from "#middleware/index.js";
+import { verifyUserMiddleware } from "#middleware/verifyUser.js";
 import express from "express";
 
 const userRouter = express.Router();
@@ -15,20 +21,19 @@ userRouter.post(
     const { status, payload } = result;
 
     const accessToken =
-      "accessToken" in result ? result.accessToken : undefined;
+      ACCESS_TOKEN_COOKIE_KEY in result ? result.accessToken : undefined;
 
     if (accessToken) {
-      res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // HTTPS only in prod
-        sameSite: "lax",
-        maxAge: 24 * 60 * 60 * 1000, // 1 day
-        path: process.env.NODE_ENV === "production" ? "" : "/", // In production should be set to deployed site's url
-      });
+      res.cookie(ACCESS_TOKEN_COOKIE_KEY, accessToken, COOKIE_CONFIG);
     }
 
     res.status(status).send(payload);
   },
 );
+
+userRouter.post("/logout", verifyUserMiddleware, async (req, res) => {
+  res.clearCookie(ACCESS_TOKEN_COOKIE_KEY, COOKIE_CONFIG);
+  res.send(STATUS_CODES.OK);
+});
 
 export default userRouter;

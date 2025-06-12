@@ -1,5 +1,8 @@
 import type { Request, Response } from "express";
-import type { LoginUserRequestPayload } from "./types.js";
+import type {
+  LoginUserRequestPayload,
+  UserRequestCookiePayload,
+} from "./types.js";
 import { Users } from "#db/schema/index.js";
 import { db } from "#db/index.js";
 import { eq } from "drizzle-orm";
@@ -34,7 +37,7 @@ export async function loginUser(userData: LoginUserRequestPayload) {
     }
 
     // User has matched, need to login
-    const userDetails = {
+    const userDetails: UserRequestCookiePayload = {
       username: user[0].username,
       role: user[0].role,
     };
