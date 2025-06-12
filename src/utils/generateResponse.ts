@@ -18,7 +18,7 @@ export function generateSuccessResponse(
 ) {
   return {
     status: successData.status,
-    paylaod: { data: successData.data, error: null },
+    payload: { data: successData.data, error: null },
   };
 }
 

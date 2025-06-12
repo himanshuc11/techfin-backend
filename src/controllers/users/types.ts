@@ -9,3 +9,8 @@ export type UserRequestCookiePayload = {
   username: string;
   role: number;
 };
+
+export type JWTPayload = UserRequestCookiePayload & {
+  iat: number;
+  exp: number;
+};
