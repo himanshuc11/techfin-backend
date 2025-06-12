@@ -1,6 +1,7 @@
 import {
   addTransaction,
   deleteTransaction,
+  readTransactions,
   updateTransaction,
 } from "#controllers/transactions/index.js";
 import {
@@ -20,8 +21,12 @@ import express from "express";
 
 const transactionRouter = express.Router();
 
-transactionRouter.get("/", verifyUserMiddleware, () => {
-  console.log("Get Transactions");
+transactionRouter.get("/", verifyUserMiddleware, async (req, res) => {
+  const username = req.user!.username;
+
+  const { status, payload } = await readTransactions({ username });
+
+  res.status(status).send(payload);
 });
 
 transactionRouter.post(

@@ -4,6 +4,10 @@ import {
   transactionUpdateRequestPayload,
 } from "./validation.js";
 
+export type Username = {
+  username: string;
+};
+
 export type TransactionInsertRequestPayload = z.infer<
   typeof transactionInsertRequestPayload.shape.body
 >;
@@ -16,14 +20,10 @@ export type TransactionDeleteRequestPayload = z.infer<
   typeof transactionUpdateRequestPayload.shape.body
 >;
 
-export type AddTransactionParams = TransactionInsertRequestPayload & {
-  username: string;
-};
+export type AddTransactionParams = TransactionInsertRequestPayload & Username;
 
-export type UpdateTransactionPayload = TransactionUpdateRequestPayload & {
-  username: string;
-};
+export type UpdateTransactionPayload = TransactionUpdateRequestPayload &
+  Username;
 
-export type DeleteTransactionPayload = TransactionDeleteRequestPayload & {
-  username: string;
-};
+export type DeleteTransactionPayload = TransactionDeleteRequestPayload &
+  Username;

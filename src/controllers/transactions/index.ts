@@ -7,11 +7,12 @@ import {
   generateErrorResponse,
   generateSuccessResponse,
 } from "#utils/generateResponse.js";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import {
   AddTransactionParams,
   DeleteTransactionPayload,
   UpdateTransactionPayload,
+  Username,
 } from "./types.js";
 
 export async function addTransaction(params: AddTransactionParams) {
@@ -186,6 +187,51 @@ export async function deleteTransaction(params: DeleteTransactionPayload) {
     return generateSuccessResponse({
       status: STATUS_CODES.OK,
       data: {},
+    });
+  } catch (err: unknown) {
+    console.error("ERROR", err);
+
+    if (err instanceof Error && err.message === "Invalid username") {
+      return generateErrorResponse({
+        status: STATUS_CODES.NOT_FOUND,
+        error: RESPONSE_ERROR_CODES.USER_NOT_FOUND,
+      });
+    }
+
+    return generateErrorResponse({
+      status: STATUS_CODES.SERVER_ERROR,
+      error: RESPONSE_ERROR_CODES.SOMETHING_WENT_WRONG_SERVER_ERROR,
+    });
+  }
+}
+
+export async function readTransactions(params: Username) {
+  try {
+    const user = await getUserFromUsername(params.username);
+
+    if (!user) {
+      throw new Error("Invalid username");
+    }
+
+    // select id, payee, amountInPaise, category, from transactions where isDeleted = false and organization = user.organization;
+    const transactions = await db
+      .select({
+        id: Transactions.id,
+        payee: Transactions.payee,
+        amount: sql`ROUND(${Transactions.amountInPaise} / 100.0, 2)`,
+        category: Transactions.category,
+        date: Transactions.date,
+      })
+      .from(Transactions)
+      .where(
+        eq(Transactions.isDeleted, false) &&
+          eq(Transactions.organization, user.organization),
+      )
+      .orderBy(Transactions.id);
+
+    return generateSuccessResponse({
+      status: STATUS_CODES.OK,
+      data: transactions,
     });
   } catch (err: unknown) {
     console.error("ERROR", err);
