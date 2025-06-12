@@ -1,0 +1,50 @@
+{
+  "name": "waitlist-backend",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx --watch --env-file .env.development src/routes/index.ts",
+    "dev:staging": "tsx --watch --env-file .env.staging src/routes/index.ts",
+    "dev:prod": "tsx --watch --env-file .env.prod src/routes/index.ts",
+    "start": "node --env-file .env dist/index.js",
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "makemigrations": "NODE_OPTIONS='--import tsx' pnpm drizzle-kit generate",
+    "migrate": "NODE_OPTIONS='--import tsx' pnpm drizzle-kit migrate"
+  },
+  "imports": {
+    "#*": "./src/*"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.6.5",
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.0",
+    "body-parser": "^2.2.0",
+    "dotenv": "^16.5.0",
+    "drizzle-orm": "^0.43.1",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.25.1",
+    "@tsconfig/node22": "^22.0.1",
+    "@types/body-parser": "^1.19.6",
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.15.2",
+    "drizzle-kit": "^0.31.0",
+    "eslint": "^9.25.1",
+    "eslint-plugin-perfectionist": "^4.12.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.1",
+    "prettier": "^3.5.3",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.31.0"
+  }
+}
