@@ -6,4 +6,6 @@ export const STATUS_CODES = {
 
   OK: 200,
   SERVER_ERROR: 500,
+
+  PERMANENT_REDIRECT: 302,
 };
