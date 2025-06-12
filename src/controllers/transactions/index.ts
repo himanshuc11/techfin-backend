@@ -8,7 +8,11 @@ import {
   generateSuccessResponse,
 } from "#utils/generateResponse.js";
 import { eq } from "drizzle-orm";
-import { AddTransactionParams, UpdateTransactionPayload } from "./types.js";
+import {
+  AddTransactionParams,
+  DeleteTransactionPayload,
+  UpdateTransactionPayload,
+} from "./types.js";
 
 export async function addTransaction(params: AddTransactionParams) {
   try {
@@ -125,6 +129,63 @@ export async function updateTransaction(params: UpdateTransactionPayload) {
     return generateSuccessResponse({
       status: STATUS_CODES.OK,
       data: result[0],
+    });
+  } catch (err: unknown) {
+    console.error("ERROR", err);
+
+    if (err instanceof Error && err.message === "Invalid username") {
+      return generateErrorResponse({
+        status: STATUS_CODES.NOT_FOUND,
+        error: RESPONSE_ERROR_CODES.USER_NOT_FOUND,
+      });
+    }
+
+    return generateErrorResponse({
+      status: STATUS_CODES.SERVER_ERROR,
+      error: RESPONSE_ERROR_CODES.SOMETHING_WENT_WRONG_SERVER_ERROR,
+    });
+  }
+}
+
+export async function deleteTransaction(params: DeleteTransactionPayload) {
+  try {
+    const user = await getUserFromUsername(params.username);
+
+    if (!user) {
+      throw new Error("Invalid username");
+    }
+
+    const result = await db.transaction(async (tx) => {
+      const updatedTx = await tx
+        .update(Transactions)
+        .set({ isDeleted: true })
+        .where(eq(Transactions.id, params.transactionId))
+        .returning();
+
+      if (!updatedTx.length) {
+        return updatedTx;
+      }
+
+      console.log("::3");
+      const historyData = {
+        payee: updatedTx[0].payee,
+        amountInPaise: updatedTx[0].amountInPaise,
+        category: updatedTx[0].category,
+        date: updatedTx[0].date,
+        isDeleted: updatedTx[0].isDeleted,
+        organization: updatedTx[0].organization,
+        updatedBy: user.id,
+        transactionId: updatedTx[0].id,
+      };
+
+      await tx.insert(TransactionHistory).values(historyData);
+
+      return updatedTx;
+    });
+
+    return generateSuccessResponse({
+      status: STATUS_CODES.OK,
+      data: {},
     });
   } catch (err: unknown) {
     console.error("ERROR", err);

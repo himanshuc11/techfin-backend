@@ -1,12 +1,15 @@
 import {
   addTransaction,
+  deleteTransaction,
   updateTransaction,
 } from "#controllers/transactions/index.js";
 import {
+  TransactionDeleteRequestPayload,
   TransactionInsertRequestPayload,
   TransactionUpdateRequestPayload,
 } from "#controllers/transactions/types.js";
 import {
+  transactionDeleteRequestPayload,
   transactionInsertRequestPayload,
   transactionUpdateRequestPayload,
 } from "#controllers/transactions/validation.js";
@@ -17,7 +20,7 @@ import express from "express";
 
 const transactionRouter = express.Router();
 
-transactionRouter.get("/", () => {
+transactionRouter.get("/", verifyUserMiddleware, () => {
   console.log("Get Transactions");
 });
 
@@ -49,6 +52,25 @@ transactionRouter.patch(
     const updateTransactionPayload = { ...body, username };
 
     const { status, payload } = await updateTransaction(
+      updateTransactionPayload,
+    );
+
+    res.status(status).send(payload);
+  },
+);
+
+transactionRouter.delete(
+  "/delete",
+  verifyUserMiddleware,
+  validateDataSchemaMiddleware(transactionDeleteRequestPayload),
+  verifyUserAndTransactionOrganization,
+  async (req, res) => {
+    const body = req.body as TransactionDeleteRequestPayload;
+    const username = req.user!.username;
+
+    const updateTransactionPayload = { ...body, username };
+
+    const { status, payload } = await deleteTransaction(
       updateTransactionPayload,
     );
 

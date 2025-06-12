@@ -23,3 +23,11 @@ export const transactionUpdateRequestPayload = z.object({
       "At least one field must be provided and id",
     ),
 });
+
+export const transactionDeleteRequestPayload = z.object({
+  body: z
+    .object({
+      transactionId: z.number(),
+    })
+    .strict(),
+});
