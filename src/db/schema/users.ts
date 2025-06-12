@@ -5,7 +5,7 @@ import { userRoles } from "./userRoles.js";
 export const users = pgTable("techfin_users", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
-  username: varchar("username", { length: 255 }).notNull(),
+  username: varchar("username", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
   role: integer("role")
     .references(() => userRoles.id)

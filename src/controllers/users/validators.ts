@@ -1,9 +1,8 @@
 import { z } from "zod";
 import { AUTHETICATION_TYPE } from "./constants.js";
+import { createZodEnumFromConst } from "#utils/index.js";
 
-export const authTypeSchema = z.enum(
-  Object.values(AUTHETICATION_TYPE) as [string, ...string[]],
-);
+const authTypeSchema = createZodEnumFromConst(AUTHETICATION_TYPE);
 
 export const userLoginRequestPayload = z.object({
   body: z.object({
