@@ -1,0 +1,1 @@
+ALTER TABLE "techfin_users" ADD CONSTRAINT "techfin_users_username_unique" UNIQUE("username");

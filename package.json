@@ -26,10 +26,17 @@
   "packageManager": "pnpm@10.6.5",
   "dependencies": {
     "@neondatabase/serverless": "^1.0.0",
+    "@types/bcrypt": "^5.0.2",
+    "@types/cookie-parser": "^1.4.9",
+    "@types/jsonwebtoken": "^9.0.9",
+    "bcrypt": "^6.0.0",
     "body-parser": "^2.2.0",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.43.1",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^3.25.63"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.1",
