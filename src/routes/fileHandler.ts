@@ -5,7 +5,7 @@ import { generateErrorResponse } from "#utils/generateResponse.js";
 import express from "express";
 import path from "path";
 import fs from "fs";
-import validateDataSchemaMiddleware from "#middleware/index.js";
+import validateDataSchemaMiddleware from "#middleware/validateDataSchema.js";
 import { startUploadRequestPayload } from "#controllers/fileHandler/validation.js";
 import { StartUploadParams } from "#controllers/fileHandler/types.js";
 import { startFileUpload } from "#controllers/fileHandler/index.js";
