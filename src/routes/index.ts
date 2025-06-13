@@ -4,6 +4,7 @@ import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import transactionRouter from "./transaction.js";
 import userRouter from "./user.js";
+import fileRouter from "./fileHandler.js";
 
 const port = process.env.PORT;
 
@@ -13,6 +14,7 @@ app.use(cookieParser());
 
 app.use("/transaction", transactionRouter);
 app.use("/user", userRouter);
+app.use("/file", fileRouter);
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`, DATABASE_URL);
