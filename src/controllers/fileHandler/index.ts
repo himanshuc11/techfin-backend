@@ -7,7 +7,7 @@ import path from "path";
 import { UPLOAD_DIR } from "./constants.js";
 import fs from "fs";
 
-import { StartUploadParams } from "./types.js";
+import { StartUploadParams, UploadFileChunkFunctionParams } from "./types.js";
 import { v4 as uuidv4 } from "uuid";
 import { RESPONSE_ERROR_CODES } from "#constants/errorCodes.js";
 
@@ -40,4 +40,26 @@ export function startFileUpload(params: StartUploadParams) {
   }
 }
 
-export function uploadFileChunk() {}
+export function uploadFileChunk(params: UploadFileChunkFunctionParams) {
+  const { startByte: startByteAsString, fileId, filename } = params;
+  const startByte = parseInt(startByteAsString || "0", 10);
+
+  if (typeof startByte !== "number") {
+    return generateErrorResponse({
+      status: STATUS_CODES.BAD_REQUEST,
+      error: RESPONSE_ERROR_CODES.REQUEST_VALIDATION_FAILED,
+    });
+  }
+
+  const folderPath = path.join(UPLOAD_DIR, fileId);
+  fs.mkdirSync(folderPath, { recursive: true });
+
+  const filePath = path.join(folderPath, filename);
+
+  const writeStream = fs.createWriteStream(filePath, {
+    flags: "a",
+    start: startByte,
+  });
+
+  return writeStream;
+}

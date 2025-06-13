@@ -13,6 +13,7 @@ const validateDataSchemaMiddleware =
         body: req.body,
         query: req.query,
         params: req.params,
+        headers: req.headers,
       });
       return next();
     } catch (error) {
