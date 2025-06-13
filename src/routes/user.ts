@@ -6,7 +6,7 @@ import { STATUS_CODES } from "#constants/statusCodes.js";
 import { loginUser } from "#controllers/users/index.js";
 import { LoginUserRequestPayload } from "#controllers/users/types.js";
 import { userLoginRequestPayload } from "#controllers/users/validators.js";
-import validateDataSchemaMiddleware from "#middleware/index.js";
+import validateDataSchemaMiddleware from "#middleware/validateDataSchema.js";
 import { verifyUserMiddleware } from "#middleware/verifyUser.js";
 import express from "express";
 

@@ -14,7 +14,7 @@ import {
   transactionInsertRequestPayload,
   transactionUpdateRequestPayload,
 } from "#controllers/transactions/validation.js";
-import validateDataSchemaMiddleware from "#middleware/index.js";
+import validateDataSchemaMiddleware from "#middleware/validateDataSchema.js";
 import { verifyUserMiddleware } from "#middleware/verifyUser.js";
 import { verifyUserAndTransactionOrganization } from "#middleware/verifyUserAndTransactionOrganization.js";
 import express from "express";
