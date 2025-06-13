@@ -10,14 +10,17 @@ import path from "path";
 import fs from "fs";
 import validateDataSchemaMiddleware from "#middleware/validateDataSchema.js";
 import {
+  mergeRequestPayload,
   startUploadRequestPayload,
   uploadFileChunkRequestPayload,
 } from "#controllers/fileHandler/validation.js";
 import {
   StartUploadParams,
   UploadFileChunkParams,
+  XfileHeadersParams,
 } from "#controllers/fileHandler/types.js";
 import {
+  mergeFileChunks,
   startFileUpload,
   uploadFileChunk,
 } from "#controllers/fileHandler/index.js";
@@ -78,6 +81,19 @@ fileRouter.put(
         .status(writableStreamOrError.status)
         .send(writableStreamOrError.payload);
     }
+  },
+);
+
+fileRouter.post(
+  "/merge",
+  validateDataSchemaMiddleware(mergeRequestPayload),
+  async (req, res) => {
+    const headers = req.headers as XfileHeadersParams;
+    const xFileId = headers["x-file-id"];
+
+    const { status, payload } = await mergeFileChunks(xFileId);
+
+    res.status(status).send(payload);
   },
 );
 

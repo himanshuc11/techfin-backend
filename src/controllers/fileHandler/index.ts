@@ -4,8 +4,14 @@ import {
   generateSuccessResponse,
 } from "#utils/generateResponse.js";
 import path from "path";
-import { UPLOAD_DIR } from "./constants.js";
+import { META_FILE, UPLOAD_DIR } from "./constants.js";
 import fs from "fs";
+import { promisify } from "util";
+
+const readdir = promisify(fs.readdir);
+const stat = promisify(fs.stat);
+const unlink = promisify(fs.unlink);
+const rmdir = promisify(fs.rmdir);
 
 import { StartUploadParams, UploadFileChunkFunctionParams } from "./types.js";
 import { v4 as uuidv4 } from "uuid";
@@ -23,7 +29,7 @@ export function startFileUpload(params: StartUploadParams) {
     };
 
     fs.writeFileSync(
-      path.join(folderPath, "meta.json"),
+      path.join(folderPath, META_FILE),
       JSON.stringify(metaData),
     );
 
@@ -62,4 +68,53 @@ export function uploadFileChunk(params: UploadFileChunkFunctionParams) {
   });
 
   return writeStream;
+}
+
+export async function mergeFileChunks(fileId: string) {
+  try {
+    const folderPath = path.join(UPLOAD_DIR, fileId);
+    const metaFileData = JSON.parse(
+      fs.readFileSync(path.join(folderPath, META_FILE), "utf8"),
+    );
+
+    if (!fs.existsSync(folderPath) || !metaFileData) {
+      throw new Error("Incorrect File Id");
+    }
+
+    const chunkFilesWithMetaData = await readdir(folderPath);
+    const chunkFiles = chunkFilesWithMetaData.filter(
+      (chunkFile) => chunkFile !== META_FILE,
+    );
+
+    const { filename } = metaFileData;
+    const outputFilePath = path.join(folderPath, `${fileId}_${filename}`);
+
+    const sortedChunks = chunkFiles.sort();
+    const writeStream = fs.createWriteStream(outputFilePath);
+
+    for (const chunk of sortedChunks) {
+      const chunkPath = path.join(folderPath, chunk);
+      const data = await fs.promises.readFile(chunkPath);
+      writeStream.write(data);
+    }
+
+    writeStream.end();
+
+    return generateSuccessResponse({
+      status: STATUS_CODES.OK,
+      data: { fileId },
+    });
+  } catch (err) {
+    if (err instanceof Error && err.message === "Incorrect File Id") {
+      return generateErrorResponse({
+        status: STATUS_CODES.NOT_FOUND,
+        error: RESPONSE_ERROR_CODES.REQUEST_VALIDATION_FAILED,
+      });
+    }
+
+    return generateErrorResponse({
+      status: STATUS_CODES.SERVER_ERROR,
+      error: RESPONSE_ERROR_CODES.SOMETHING_WENT_WRONG_SERVER_ERROR,
+    });
+  }
 }

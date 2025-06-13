@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  mergeRequestPayload,
   startUploadRequestPayload,
   uploadFileChunkRequestPayload,
 } from "./validation.js";
@@ -19,3 +20,8 @@ export type UploadFileChunkFunctionParams = {
   filename: string;
   fileId: string;
 };
+
+export type XfileHeadersParams = z.infer<
+  typeof mergeRequestPayload.shape.headers
+> &
+  IncomingHttpHeaders;
