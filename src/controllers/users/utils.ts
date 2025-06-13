@@ -27,3 +27,17 @@ export async function diduserHaveValidCredentials(
 
   return isValid;
 }
+
+export async function getUserFromUsername(username: string) {
+  const user = await db
+    .select()
+    .from(Users)
+    .where(eq(Users.username, username));
+
+  if (user.length !== 1) {
+    return null;
+  }
+
+  const userDetails = user[0];
+  return userDetails;
+}

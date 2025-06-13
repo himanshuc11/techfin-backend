@@ -1,7 +1,10 @@
 import { JWT_TOKEN } from "#constants/env.js";
 import { RESPONSE_ERROR_CODES } from "#constants/errorCodes.js";
 import { STATUS_CODES } from "#constants/statusCodes.js";
-import { UserRequestCookiePayload } from "#controllers/users/types.js";
+import {
+  JWTPayload,
+  UserRequestCookiePayload,
+} from "#controllers/users/types.js";
 import { generateErrorResponse } from "#utils/generateResponse.js";
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
@@ -32,7 +35,13 @@ export function verifyUserMiddleware(
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_TOKEN) as UserRequestCookiePayload;
+    const decoded = jwt.verify(token, JWT_TOKEN) as JWTPayload;
+
+    // Check if token is expired
+    if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+      throw new Error("Token expired");
+    }
+
     req.user = decoded;
     next();
   } catch (err) {
