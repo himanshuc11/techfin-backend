@@ -1,9 +1,11 @@
-export const COOKIE_CONFIG = {
+import { CookieOptions } from "express";
+
+export const COOKIE_CONFIG: CookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production", // HTTPS only in prod
-  sameSite: "lax",
+  secure: false, // Need to run in HTTP environment
+  sameSite: "lax", // Allows cross-site requests
   maxAge: 24 * 60 * 60 * 1000, // 1 day
-  path: process.env.NODE_ENV === "production" ? "" : "/", // In production should be set to deployed site's url
+  path: "/", // Root path to ensure cookie is sent for all requests
 } as const;
 
 export const ACCESS_TOKEN_COOKIE_KEY = "accessToken";

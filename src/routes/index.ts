@@ -1,4 +1,4 @@
-import { DATABASE_URL } from "#constants/env.js";
+import { CLIENT_PATH, DATABASE_URL } from "#constants/env.js";
 import express from "express";
 import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
@@ -12,7 +12,12 @@ const app = express();
 
 app.use(bodyParser.json());
 app.use(cookieParser());
-app.use(cors());
+app.use(
+  cors({
+    origin: CLIENT_PATH,
+    credentials: true,
+  }),
+);
 
 app.use("/transaction", transactionRouter);
 app.use("/user", userRouter);
