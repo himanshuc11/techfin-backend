@@ -15,6 +15,7 @@ import {
   UpdateTransactionPayload,
   Username,
 } from "./types.js";
+import { getCommonFilters } from "./utils.js";
 
 export async function addTransaction(params: AddTransactionParams) {
   try {
@@ -216,55 +217,8 @@ export async function readTransactions(
       throw new Error("Invalid username");
     }
 
-    const {
-      payee,
-      minAmount,
-      maxAmount,
-      category,
-      dateFrom,
-      dateTo,
-      cursor,
-      pageSize = 10,
-    } = filters;
-
-    const commonFilters = [
-      eq(Transactions.organization, user.organization),
-      eq(Transactions.isDeleted, false),
-    ];
-
-    if (payee) {
-      commonFilters.push(
-        sql`LOWER(${Transactions.payee}) LIKE LOWER(${`%${payee}%`})`,
-      );
-    }
-
-    if (category) {
-      commonFilters.push(eq(Transactions.category, category));
-    }
-
-    if (minAmount !== undefined) {
-      commonFilters.push(
-        gte(Transactions.amountInPaise, Math.floor(minAmount * 100)),
-      );
-    }
-
-    if (maxAmount !== undefined) {
-      commonFilters.push(
-        lte(Transactions.amountInPaise, Math.floor(maxAmount * 100)),
-      );
-    }
-
-    if (dateFrom) {
-      commonFilters.push(
-        gte(Transactions.date, new Date(dateFrom).toISOString()),
-      );
-    }
-
-    if (dateTo) {
-      commonFilters.push(
-        lte(Transactions.date, new Date(dateTo).toISOString()),
-      );
-    }
+    const { cursor, pageSize = 10 } = filters;
+    const commonFilters = getCommonFilters(filters, user.organization);
 
     const nextQueryFilters = [...commonFilters];
 
@@ -322,6 +276,81 @@ export async function readTransactions(
         previousCursor,
         transactions: data,
         totalResult: totalResult[0].count,
+      },
+    });
+  } catch (err: unknown) {
+    console.error("ERROR", err);
+
+    if (err instanceof Error && err.message === "Invalid username") {
+      return generateErrorResponse({
+        status: STATUS_CODES.NOT_FOUND,
+        error: RESPONSE_ERROR_CODES.USER_NOT_FOUND,
+      });
+    }
+
+    return generateErrorResponse({
+      status: STATUS_CODES.SERVER_ERROR,
+      error: RESPONSE_ERROR_CODES.SOMETHING_WENT_WRONG_SERVER_ERROR,
+    });
+  }
+}
+
+export async function downloadExcel(
+  params: Username,
+  filters: TransactionReadPayload = {},
+) {
+  try {
+    const user = await getUserFromUsername(params.username);
+
+    if (!user) {
+      throw new Error("Invalid username");
+    }
+
+    const commonFilters = getCommonFilters(filters, user.organization);
+
+    // select id, payee, amountInPaise, category, from transactions where isDeleted = false and organization = user.organization;
+    const query = db
+      .select({
+        id: Transactions.id,
+        payee: Transactions.payee,
+        amount: sql`ROUND(${Transactions.amountInPaise} / 100.0, 2)`,
+        category: Transactions.category,
+        date: Transactions.date,
+      })
+      .from(Transactions)
+      .where(and(...commonFilters))
+      .orderBy(Transactions.id);
+
+    const results = await query;
+
+    // Convert results to worksheet data
+    const worksheetData = results.map((record) => ({
+      ID: record.id,
+      Payee: record.payee,
+      Amount: record.amount,
+      Category: record.category,
+      Date: new Date(record.date).toISOString(),
+    }));
+
+    // Create a new workbook
+    const XLSX = await import("xlsx");
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
+
+    // Generate buffer
+    const excelBuffer = XLSX.write(workbook, {
+      type: "buffer",
+      bookType: "xlsx",
+    });
+
+    return generateSuccessResponse({
+      status: STATUS_CODES.OK,
+      data: {
+        content: excelBuffer.toString("base64"), // Convert buffer to base64
+        filename: "transactions.xlsx",
       },
     });
   } catch (err: unknown) {

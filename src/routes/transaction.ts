@@ -1,6 +1,7 @@
 import {
   addTransaction,
   deleteTransaction,
+  downloadExcel,
   readTransactions,
   updateTransaction,
 } from "#controllers/transactions/index.js";
@@ -32,6 +33,20 @@ transactionRouter.get(
     const filters = req.query as TransactionReadPayload;
 
     const { status, payload } = await readTransactions({ username }, filters);
+
+    res.status(status).send(payload);
+  },
+);
+
+transactionRouter.get(
+  "/download",
+  verifyUserMiddleware,
+  validateDataSchemaMiddleware(transactionSearchRequestPayload),
+  async (req, res) => {
+    const username = req.user!.username;
+    const filters = req.query as TransactionReadPayload;
+
+    const { status, payload } = await downloadExcel({ username }, filters);
 
     res.status(status).send(payload);
   },
