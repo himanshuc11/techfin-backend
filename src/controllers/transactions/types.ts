@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   transactionInsertRequestPayload,
+  transactionSearchRequestPayload,
   transactionUpdateRequestPayload,
 } from "./validation.js";
 
@@ -27,3 +28,7 @@ export type UpdateTransactionPayload = TransactionUpdateRequestPayload &
 
 export type DeleteTransactionPayload = TransactionDeleteRequestPayload &
   Username;
+
+export type TransactionReadPayload = z.infer<
+  typeof transactionSearchRequestPayload.shape.query
+>;

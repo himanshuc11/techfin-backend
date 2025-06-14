@@ -7,10 +7,11 @@ import {
   generateErrorResponse,
   generateSuccessResponse,
 } from "#utils/generateResponse.js";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, gt, lte, gte, sql, lt } from "drizzle-orm";
 import {
   AddTransactionParams,
   DeleteTransactionPayload,
+  TransactionReadPayload,
   UpdateTransactionPayload,
   Username,
 } from "./types.js";
@@ -167,7 +168,6 @@ export async function deleteTransaction(params: DeleteTransactionPayload) {
         return updatedTx;
       }
 
-      console.log("::3");
       const historyData = {
         payee: updatedTx[0].payee,
         amountInPaise: updatedTx[0].amountInPaise,
@@ -205,7 +205,10 @@ export async function deleteTransaction(params: DeleteTransactionPayload) {
   }
 }
 
-export async function readTransactions(params: Username) {
+export async function readTransactions(
+  params: Username,
+  filters: TransactionReadPayload = {},
+) {
   try {
     const user = await getUserFromUsername(params.username);
 
@@ -213,8 +216,64 @@ export async function readTransactions(params: Username) {
       throw new Error("Invalid username");
     }
 
+    const {
+      payee,
+      minAmount,
+      maxAmount,
+      category,
+      dateFrom,
+      dateTo,
+      cursor,
+      pageSize = 10,
+    } = filters;
+
+    const commonFilters = [
+      eq(Transactions.organization, user.organization),
+      eq(Transactions.isDeleted, false),
+    ];
+
+    if (payee) {
+      commonFilters.push(
+        sql`LOWER(${Transactions.payee}) LIKE LOWER(${`%${payee}%`})`,
+      );
+    }
+
+    if (category) {
+      commonFilters.push(eq(Transactions.category, category));
+    }
+
+    if (minAmount !== undefined) {
+      commonFilters.push(
+        gte(Transactions.amountInPaise, Math.floor(minAmount * 100)),
+      );
+    }
+
+    if (maxAmount !== undefined) {
+      commonFilters.push(
+        lte(Transactions.amountInPaise, Math.floor(maxAmount * 100)),
+      );
+    }
+
+    if (dateFrom) {
+      commonFilters.push(
+        gte(Transactions.date, new Date(dateFrom).toISOString()),
+      );
+    }
+
+    if (dateTo) {
+      commonFilters.push(
+        lte(Transactions.date, new Date(dateTo).toISOString()),
+      );
+    }
+
+    const nextQueryFilters = [...commonFilters];
+
+    if (cursor !== undefined) {
+      nextQueryFilters.push(gt(Transactions.id, cursor));
+    }
+
     // select id, payee, amountInPaise, category, from transactions where isDeleted = false and organization = user.organization;
-    const transactions = await db
+    const query = db
       .select({
         id: Transactions.id,
         payee: Transactions.payee,
@@ -223,18 +282,47 @@ export async function readTransactions(params: Username) {
         date: Transactions.date,
       })
       .from(Transactions)
-      .where(
-        and(
-          eq(Transactions.isDeleted, false),
-          eq(Transactions.organization, user.organization),
-        ),
-      )
-      .limit(10)
-      .orderBy(Transactions.id);
+      .where(and(...nextQueryFilters))
+      .orderBy(Transactions.id)
+      .limit(pageSize + 1); // +1 to check if there's more
+
+    const results = await query;
+    const data = results.slice(0, pageSize);
+    const nextCursor =
+      results.length > pageSize ? results[pageSize - 1].id : null;
+
+    // Get previous page data to determine previous cursor
+    let prevCursorQuery = null;
+
+    if (cursor) {
+      prevCursorQuery = db
+        .select({ id: Transactions.id })
+        .from(Transactions)
+        .where(and(...commonFilters, lt(Transactions.id, cursor)))
+        .orderBy(sql`${Transactions.id} desc`)
+        .limit(pageSize);
+    }
+
+    const previousResults = cursor ? await prevCursorQuery : null;
+
+    const previousCursor = previousResults?.length
+      ? previousResults[previousResults.length - 1].id
+      : null;
+
+    // Get total count matching filters
+    const totalResult = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(Transactions)
+      .where(and(...commonFilters));
 
     return generateSuccessResponse({
       status: STATUS_CODES.OK,
-      data: transactions,
+      data: {
+        nextCursor,
+        previousCursor,
+        transactions: data,
+        totalResult: totalResult[0].count,
+      },
     });
   } catch (err: unknown) {
     console.error("ERROR", err);

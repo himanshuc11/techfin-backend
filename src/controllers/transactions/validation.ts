@@ -31,3 +31,18 @@ export const transactionDeleteRequestPayload = z.object({
     })
     .strict(),
 });
+
+export const transactionSearchRequestPayload = z.object({
+  query: z
+    .object({
+      payee: z.string().min(1).optional(),
+      minAmount: z.coerce.number().multipleOf(0.01).positive().optional(),
+      maxAmount: z.coerce.number().multipleOf(0.01).positive().optional(),
+      category: z.string().min(1).optional(),
+      dateFrom: z.coerce.date().optional(),
+      dateTo: z.coerce.date().optional(),
+      cursor: z.coerce.number().int().positive().optional(),
+      pageSize: z.coerce.number().int().positive().optional(),
+    })
+    .strict(),
+});
