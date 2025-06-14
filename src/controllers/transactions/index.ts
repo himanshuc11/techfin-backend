@@ -7,13 +7,15 @@ import {
   generateErrorResponse,
   generateSuccessResponse,
 } from "#utils/generateResponse.js";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, gt, lte, gte, sql, lt } from "drizzle-orm";
 import {
   AddTransactionParams,
   DeleteTransactionPayload,
+  TransactionReadPayload,
   UpdateTransactionPayload,
   Username,
 } from "./types.js";
+import { getCommonFilters } from "./utils.js";
 
 export async function addTransaction(params: AddTransactionParams) {
   try {
@@ -83,10 +85,10 @@ export async function updateTransaction(params: UpdateTransactionPayload) {
       throw new Error("Invalid username");
     }
 
-    let mappedData: { amount?: number; date?: string } = {};
+    let mappedData: { amountInPaise?: number; date?: string } = {};
 
     if (params.amount) {
-      mappedData.amount = params.amount * 100;
+      mappedData.amountInPaise = params.amount * 100;
     }
 
     if (params.date) {
@@ -167,7 +169,6 @@ export async function deleteTransaction(params: DeleteTransactionPayload) {
         return updatedTx;
       }
 
-      console.log("::3");
       const historyData = {
         payee: updatedTx[0].payee,
         amountInPaise: updatedTx[0].amountInPaise,
@@ -205,7 +206,10 @@ export async function deleteTransaction(params: DeleteTransactionPayload) {
   }
 }
 
-export async function readTransactions(params: Username) {
+export async function readTransactions(
+  params: Username,
+  filters: TransactionReadPayload = {},
+) {
   try {
     const user = await getUserFromUsername(params.username);
 
@@ -213,8 +217,17 @@ export async function readTransactions(params: Username) {
       throw new Error("Invalid username");
     }
 
+    const { cursor, pageSize = 10 } = filters;
+    const commonFilters = getCommonFilters(filters, user.organization);
+
+    const nextQueryFilters = [...commonFilters];
+
+    if (cursor !== undefined) {
+      nextQueryFilters.push(gt(Transactions.id, cursor));
+    }
+
     // select id, payee, amountInPaise, category, from transactions where isDeleted = false and organization = user.organization;
-    const transactions = await db
+    const query = db
       .select({
         id: Transactions.id,
         payee: Transactions.payee,
@@ -223,15 +236,122 @@ export async function readTransactions(params: Username) {
         date: Transactions.date,
       })
       .from(Transactions)
-      .where(
-        eq(Transactions.isDeleted, false) &&
-          eq(Transactions.organization, user.organization),
-      )
-      .orderBy(Transactions.id);
+      .where(and(...nextQueryFilters))
+      .orderBy(Transactions.id)
+      .limit(pageSize + 1); // +1 to check if there's more
+
+    const results = await query;
+    const data = results.slice(0, pageSize);
+    const nextCursor =
+      results.length > pageSize ? results[pageSize - 1].id : null;
+
+    // Get previous page data to determine previous cursor
+    let prevCursorQuery = null;
+
+    if (cursor) {
+      prevCursorQuery = db
+        .select({ id: Transactions.id })
+        .from(Transactions)
+        .where(and(...commonFilters, lt(Transactions.id, cursor)))
+        .orderBy(sql`${Transactions.id} desc`)
+        .limit(pageSize);
+    }
+
+    const previousResults = cursor ? await prevCursorQuery : null;
+
+    const previousCursor = previousResults?.length
+      ? previousResults[previousResults.length - 1].id
+      : null;
+
+    // Get total count matching filters
+    const totalResult = await db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(Transactions)
+      .where(and(...commonFilters));
 
     return generateSuccessResponse({
       status: STATUS_CODES.OK,
-      data: transactions,
+      data: {
+        nextCursor,
+        previousCursor,
+        transactions: data,
+        totalResult: totalResult[0].count,
+      },
+    });
+  } catch (err: unknown) {
+    console.error("ERROR", err);
+
+    if (err instanceof Error && err.message === "Invalid username") {
+      return generateErrorResponse({
+        status: STATUS_CODES.NOT_FOUND,
+        error: RESPONSE_ERROR_CODES.USER_NOT_FOUND,
+      });
+    }
+
+    return generateErrorResponse({
+      status: STATUS_CODES.SERVER_ERROR,
+      error: RESPONSE_ERROR_CODES.SOMETHING_WENT_WRONG_SERVER_ERROR,
+    });
+  }
+}
+
+export async function downloadExcel(
+  params: Username,
+  filters: TransactionReadPayload = {},
+) {
+  try {
+    const user = await getUserFromUsername(params.username);
+
+    if (!user) {
+      throw new Error("Invalid username");
+    }
+
+    const commonFilters = getCommonFilters(filters, user.organization);
+
+    // select id, payee, amountInPaise, category, from transactions where isDeleted = false and organization = user.organization;
+    const query = db
+      .select({
+        id: Transactions.id,
+        payee: Transactions.payee,
+        amount: sql`ROUND(${Transactions.amountInPaise} / 100.0, 2)`,
+        category: Transactions.category,
+        date: Transactions.date,
+      })
+      .from(Transactions)
+      .where(and(...commonFilters))
+      .orderBy(Transactions.id);
+
+    const results = await query;
+
+    // Convert results to worksheet data
+    const worksheetData = results.map((record) => ({
+      ID: record.id,
+      Payee: record.payee,
+      Amount: record.amount,
+      Category: record.category,
+      Date: new Date(record.date).toISOString(),
+    }));
+
+    // Create a new workbook
+    const XLSX = await import("xlsx");
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
+
+    // Generate buffer
+    const excelBuffer = XLSX.write(workbook, {
+      type: "buffer",
+      bookType: "xlsx",
+    });
+
+    return generateSuccessResponse({
+      status: STATUS_CODES.OK,
+      data: {
+        content: excelBuffer.toString("base64"), // Convert buffer to base64
+        filename: "transactions.xlsx",
+      },
     });
   } catch (err: unknown) {
     console.error("ERROR", err);

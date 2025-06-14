@@ -1,17 +1,20 @@
 import {
   addTransaction,
   deleteTransaction,
+  downloadExcel,
   readTransactions,
   updateTransaction,
 } from "#controllers/transactions/index.js";
 import {
   TransactionDeleteRequestPayload,
   TransactionInsertRequestPayload,
+  TransactionReadPayload,
   TransactionUpdateRequestPayload,
 } from "#controllers/transactions/types.js";
 import {
   transactionDeleteRequestPayload,
   transactionInsertRequestPayload,
+  transactionSearchRequestPayload,
   transactionUpdateRequestPayload,
 } from "#controllers/transactions/validation.js";
 import validateDataSchemaMiddleware from "#middleware/index.js";
@@ -21,13 +24,33 @@ import express from "express";
 
 const transactionRouter = express.Router();
 
-transactionRouter.get("/", verifyUserMiddleware, async (req, res) => {
-  const username = req.user!.username;
+transactionRouter.get(
+  "/",
+  verifyUserMiddleware,
+  validateDataSchemaMiddleware(transactionSearchRequestPayload),
+  async (req, res) => {
+    const username = req.user!.username;
+    const filters = req.query as TransactionReadPayload;
 
-  const { status, payload } = await readTransactions({ username });
+    const { status, payload } = await readTransactions({ username }, filters);
 
-  res.status(status).send(payload);
-});
+    res.status(status).send(payload);
+  },
+);
+
+transactionRouter.get(
+  "/download",
+  verifyUserMiddleware,
+  validateDataSchemaMiddleware(transactionSearchRequestPayload),
+  async (req, res) => {
+    const username = req.user!.username;
+    const filters = req.query as TransactionReadPayload;
+
+    const { status, payload } = await downloadExcel({ username }, filters);
+
+    res.status(status).send(payload);
+  },
+);
 
 transactionRouter.post(
   "/add",
