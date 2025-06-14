@@ -7,7 +7,7 @@ import {
   generateErrorResponse,
   generateSuccessResponse,
 } from "#utils/generateResponse.js";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import {
   AddTransactionParams,
   DeleteTransactionPayload,
@@ -83,10 +83,10 @@ export async function updateTransaction(params: UpdateTransactionPayload) {
       throw new Error("Invalid username");
     }
 
-    let mappedData: { amount?: number; date?: string } = {};
+    let mappedData: { amountInPaise?: number; date?: string } = {};
 
     if (params.amount) {
-      mappedData.amount = params.amount * 100;
+      mappedData.amountInPaise = params.amount * 100;
     }
 
     if (params.date) {
@@ -224,9 +224,12 @@ export async function readTransactions(params: Username) {
       })
       .from(Transactions)
       .where(
-        eq(Transactions.isDeleted, false) &&
+        and(
+          eq(Transactions.isDeleted, false),
           eq(Transactions.organization, user.organization),
+        ),
       )
+      .limit(10)
       .orderBy(Transactions.id);
 
     return generateSuccessResponse({
